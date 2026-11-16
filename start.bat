@@ -1,0 +1,65 @@
+@echo off
+chcp 65001 >nul
+setlocal enabledelayedexpansion
+cd /d "%~dp0"
+title ИИ-конструктор сайтов
+echo ==============================================
+echo   ИИ-конструктор сайтов — запуск
+echo ==============================================
+
+rem --- PHP: сначала папка php\ рядом с проектом, потом системный
+set "PHP=php"
+if exist "%~dp0php\php.exe" set "PHP=%~dp0php\php.exe"
+
+"%PHP%" -v >nul 2>&1
+if errorlevel 1 (
+  echo [ОШИБКА] PHP не найден.
+  echo Установите PHP 8.3 или новее и добавьте его в PATH
+  echo либо положите распакованный PHP в папку php рядом с этим файлом.
+  echo Скачать: https://windows.php.net/download/
+  pause
+  exit /b 1
+)
+
+"%PHP%" -r "exit(version_compare(PHP_VERSION,'8.3.0','>=')?0:1);"
+if errorlevel 1 (
+  echo [ОШИБКА] Нужен PHP 8.3 или новее. Ваша версия:
+  "%PHP%" -v
+  pause
+  exit /b 1
+)
+
+rem --- нужные расширения
+set "MISSING="
+for %%E in (pdo_sqlite sqlite3 mbstring openssl fileinfo ctype tokenizer) do (
+  "%PHP%" -m | findstr /i /x "%%E" >nul || set "MISSING=!MISSING! %%E"
+)
+if defined MISSING (
+  echo [ОШИБКА] В php.ini не включены расширения:%MISSING%
+  echo Откройте php.ini и уберите точку с запятой перед extension=...
+  pause
+  exit /b 1
+)
+
+rem --- первый запуск: .env, ключ, база
+if not exist ".env" (
+  echo Первый запуск: создаю настройки...
+  copy /y ".env.example" ".env" >nul
+  "%PHP%" artisan key:generate --force
+)
+if not exist "database\database.sqlite" type nul > "database\database.sqlite"
+
+"%PHP%" artisan migrate --force
+if errorlevel 1 (
+  echo [ОШИБКА] Не удалось подготовить базу данных.
+  pause
+  exit /b 1
+)
+
+echo.
+echo Сайт открывается: http://127.0.0.1:8000
+echo Чтобы остановить сервер, закройте это окно или нажмите Ctrl+C.
+echo.
+start "" http://127.0.0.1:8000
+"%PHP%" artisan serve --host=127.0.0.1 --port=8000
+pause
