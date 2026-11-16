@@ -29,7 +29,8 @@ class SiteController extends Controller
             'city' => $data['city'] ?? null,
             'prompt' => $data['prompt'],
             'variant' => 0,
-            ...$this->generator->pickDesign($data['title'], $data['type'], $data['prompt']),
+            ...array_filter($this->generator->pickDesign($data['title'], $data['type'], $data['prompt']), fn ($v, $k) => $k !== 'template' || empty($data['template']), ARRAY_FILTER_USE_BOTH),
+            'template' => $data['template'] ?? $this->generator->pickDesign($data['title'], $data['type'], $data['prompt'])['template'],
             'content' => $this->generator->generate($data['title'], $data['type'], $data['city'] ?? null, $data['prompt']),
             'sections' => $this->generator->defaultSections(),
             'slug' => $this->uniqueSlug($data['title']),
@@ -105,6 +106,13 @@ class SiteController extends Controller
 
     public function preview(Site $site)
     {
+        // Параметры ?template=&theme=&font= показывают несохранённый вариант в предпросмотре.
+        $site->fill(array_filter([
+            'template' => array_key_exists((string) request('template'), Site::TEMPLATES) ? request('template') : null,
+            'theme' => array_key_exists((string) request('theme'), Site::THEMES) ? request('theme') : null,
+            'font' => array_key_exists((string) request('font'), Site::FONTS) ? request('font') : null,
+        ]));
+
         return view('site', ['site' => $site]);
     }
 

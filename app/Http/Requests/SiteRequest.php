@@ -24,6 +24,7 @@ class SiteRequest extends FormRequest
         if ($this->isMethod('post')) {
             return $rules + [
                 'type' => ['required', Rule::in(array_keys(SiteGenerator::TYPES))],
+                'template' => ['nullable', Rule::in(array_keys(Site::TEMPLATES))],
                 'prompt' => ['required', 'string', 'min:10', 'max:600'],
             ];
         }

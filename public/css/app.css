@@ -67,3 +67,12 @@ div.err{background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:12
 .actions .btn.primary{margin:0;width:auto}
 form.card>h2:first-of-type{margin-top:0}
 .actions .btn{white-space:nowrap}
+.tpls{border:0;padding:0;margin:0 0 8px;display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:12px}
+.tpls legend{font-weight:600;font-size:.9rem;margin:16px 0 8px;padding:0}
+.tpl{margin:0;cursor:pointer;position:relative;text-align:center;font-weight:500;font-size:.8rem}
+.tpl input{position:absolute;opacity:0}
+.tpl img{display:block;width:100%;aspect-ratio:3/2;object-fit:cover;object-position:top;border-radius:8px;border:2px solid var(--line);transition:border-color .15s,box-shadow .15s}
+.tpl:hover img{border-color:#94a3b8}
+.tpl input:checked+img{border-color:var(--accent);box-shadow:0 0 0 3px #c7d2fe}
+.tpl input:focus-visible+img{box-shadow:0 0 0 3px var(--accent)}
+.tpl input:checked~span{color:var(--accent-d);font-weight:700}

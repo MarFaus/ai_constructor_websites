@@ -33,6 +33,15 @@ if (isset($__messageOriginal)) { $message = $__messageOriginal; }
 endif;
 unset($__errorArgs, $__bag); ?>
 
+            <label for="template">Шаблон</label>
+            <select id="template" name="template">
+                <option value="">Подобрать автоматически</option>
+                <?php $__currentLoopData = \App\Models\Site::TEMPLATES; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $k => $n): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                    <option value="<?php echo e($k); ?>" <?php if(old('template') === $k): echo 'selected'; endif; ?>><?php echo e($n); ?></option>
+                <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+            </select>
+            <p class="muted">Потом можно сменить в редакторе: там видно картинки всех шаблонов.</p>
+
             <label for="city">Город <span class="muted">(необязательно)</span></label>
             <input id="city" name="city" value="<?php echo e(old('city')); ?>" maxlength="60">
 

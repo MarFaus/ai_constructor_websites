@@ -193,4 +193,13 @@ class SiteTest extends TestCase
         }
         $this->assertGreaterThan(2, count($set));
     }
+
+    public function test_preview_accepts_unsaved_design_and_create_accepts_template(): void
+    {
+        $s = $this->make();
+        $this->get(route('sites.preview', $s).'?template=bold&theme=rose')->assertSee('t-bold', false);
+        $this->assertNotSame('bold', $s->fresh()->template);
+        $this->post('/sites', ['title' => 'Своё', 'type' => 'shop', 'prompt' => 'Магазин одежды', 'template' => 'minimal']);
+        $this->assertSame('minimal', Site::where('title', 'Своё')->first()->template);
+    }
 }

@@ -32,12 +32,17 @@
         <input id="title" name="title" value="<?php echo e(old('title', $site->title)); ?>" maxlength="80" required>
         <input type="hidden" name="city" value="<?php echo e(old('city', $site->city)); ?>">
 
-        <label for="template">Шаблон</label>
-        <select id="template" name="template">
+        <fieldset class="tpls">
+            <legend>Шаблон сайта</legend>
             <?php $__currentLoopData = \App\Models\Site::TEMPLATES; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $k => $n): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-                <option value="<?php echo e($k); ?>" <?php if(old('template', $site->template) === $k): echo 'selected'; endif; ?>><?php echo e($n); ?></option>
+                <label class="tpl">
+                    <input type="radio" name="template" value="<?php echo e($k); ?>" <?php if(old('template', $site->template) === $k): echo 'checked'; endif; ?>>
+                    <img src="<?php echo e(asset('img/tpl-'.$k.'.jpg')); ?>" alt="" loading="lazy">
+                    <span><?php echo e($n); ?></span>
+                </label>
             <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
-        </select>
+        </fieldset>
+        <p class="muted">Выберите шаблон, тему или шрифт — предпросмотр справа обновится сразу. Чтобы оставить, нажмите «Сохранить изменения».</p>
 
         <div class="two">
             <div>
@@ -114,7 +119,7 @@
         <div class="frame" id="frame" data-size="desktop">
             <iframe title="Предпросмотр сайта" src="<?php echo e(route('sites.preview', $site)); ?>"></iframe>
         </div>
-        <p class="muted">Предпросмотр обновляется после сохранения.</p>
+        <p class="muted" id="unsaved" hidden>Это несохранённый вариант. Нажмите «Сохранить изменения» слева.</p>
     </section>
 </div>
 <?php $__env->stopSection(); ?>
@@ -124,6 +129,11 @@
 document.querySelectorAll('.seg button').forEach(b=>b.addEventListener('click',()=>{
   document.querySelectorAll('.seg button').forEach(x=>x.setAttribute('aria-pressed',x===b));
   document.getElementById('frame').dataset.size=b.dataset.size;}));
+const form=document.querySelector('form.card');
+const ifr=document.querySelector('.frame iframe'),base=ifr.src.split('?')[0],note=document.getElementById('unsaved');
+const pick=n=>(form.querySelector('[name='+n+']:checked')||form.querySelector('[name='+n+']')).value;
+const refresh=()=>{ifr.src=base+'?template='+pick('template')+'&theme='+pick('theme')+'&font='+pick('font');note.hidden=false;};
+['template','theme','font'].forEach(n=>form.querySelectorAll('[name='+n+']').forEach(e=>e.addEventListener('change',refresh)));
 </script>
 <?php $__env->stopPush(); ?>
 

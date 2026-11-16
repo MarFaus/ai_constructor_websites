@@ -21,6 +21,15 @@
             </select>
             @error('type')<p class="err" role="alert">{{ $message }}</p>@enderror
 
+            <label for="template">Шаблон</label>
+            <select id="template" name="template">
+                <option value="">Подобрать автоматически</option>
+                @foreach (\App\Models\Site::TEMPLATES as $k => $n)
+                    <option value="{{ $k }}" @selected(old('template') === $k)>{{ $n }}</option>
+                @endforeach
+            </select>
+            <p class="muted">Потом можно сменить в редакторе: там видно картинки всех шаблонов.</p>
+
             <label for="city">Город <span class="muted">(необязательно)</span></label>
             <input id="city" name="city" value="{{ old('city') }}" maxlength="60">
 

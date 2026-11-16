@@ -34,12 +34,17 @@
         <input id="title" name="title" value="{{ old('title', $site->title) }}" maxlength="80" required>
         <input type="hidden" name="city" value="{{ old('city', $site->city) }}">
 
-        <label for="template">Шаблон</label>
-        <select id="template" name="template">
+        <fieldset class="tpls">
+            <legend>Шаблон сайта</legend>
             @foreach (\App\Models\Site::TEMPLATES as $k => $n)
-                <option value="{{ $k }}" @selected(old('template', $site->template) === $k)>{{ $n }}</option>
+                <label class="tpl">
+                    <input type="radio" name="template" value="{{ $k }}" @checked(old('template', $site->template) === $k)>
+                    <img src="{{ asset('img/tpl-'.$k.'.jpg') }}" alt="" loading="lazy">
+                    <span>{{ $n }}</span>
+                </label>
             @endforeach
-        </select>
+        </fieldset>
+        <p class="muted">Выберите шаблон, тему или шрифт — предпросмотр справа обновится сразу. Чтобы оставить, нажмите «Сохранить изменения».</p>
 
         <div class="two">
             <div>
@@ -116,7 +121,7 @@
         <div class="frame" id="frame" data-size="desktop">
             <iframe title="Предпросмотр сайта" src="{{ route('sites.preview', $site) }}"></iframe>
         </div>
-        <p class="muted">Предпросмотр обновляется после сохранения.</p>
+        <p class="muted" id="unsaved" hidden>Это несохранённый вариант. Нажмите «Сохранить изменения» слева.</p>
     </section>
 </div>
 @endsection
@@ -126,5 +131,10 @@
 document.querySelectorAll('.seg button').forEach(b=>b.addEventListener('click',()=>{
   document.querySelectorAll('.seg button').forEach(x=>x.setAttribute('aria-pressed',x===b));
   document.getElementById('frame').dataset.size=b.dataset.size;}));
+const form=document.querySelector('form.card');
+const ifr=document.querySelector('.frame iframe'),base=ifr.src.split('?')[0],note=document.getElementById('unsaved');
+const pick=n=>(form.querySelector('[name='+n+']:checked')||form.querySelector('[name='+n+']')).value;
+const refresh=()=>{ifr.src=base+'?template='+pick('template')+'&theme='+pick('theme')+'&font='+pick('font');note.hidden=false;};
+['template','theme','font'].forEach(n=>form.querySelectorAll('[name='+n+']').forEach(e=>e.addEventListener('change',refresh)));
 </script>
 @endpush
