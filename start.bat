@@ -29,14 +29,15 @@ if errorlevel 1 (
   exit /b 1
 )
 
-rem --- нужные расширения
+rem --- нужные расширения (проверяет сам PHP)
 set "MISSING="
-for %%E in (pdo_sqlite sqlite3 mbstring openssl fileinfo ctype tokenizer) do (
-  "%PHP%" -m | findstr /i /x "%%E" >nul || set "MISSING=!MISSING! %%E"
-)
+for /f "usebackq delims=" %%M in (`"%PHP%" -r "foreach(['pdo_sqlite','sqlite3','mbstring','openssl','fileinfo','ctype','tokenizer'] as $e){if(!extension_loaded($e))echo $e,' ';}"`) do set "MISSING=%%M"
 if defined MISSING (
-  echo [ОШИБКА] В php.ini не включены расширения:%MISSING%
-  echo Откройте php.ini и уберите точку с запятой перед extension=...
+  echo [ОШИБКА] В php.ini не включены расширения: !MISSING!
+  echo Какой php.ini используется:
+  "%PHP%" --ini
+  echo Откройте этот php.ini и уберите точку с запятой перед нужными extension=...
+  echo Если php.ini нет, скопируйте php.ini-development в php.ini.
   pause
   exit /b 1
 )
