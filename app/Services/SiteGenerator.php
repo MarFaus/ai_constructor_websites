@@ -103,13 +103,44 @@ class SiteGenerator
      * Если в .env задан AI_API_KEY, сначала пробуем настоящую нейросеть
      * (любой OpenAI-совместимый API); при ошибке работает офлайн-шаблон.
      */
+    /** Оформление, выбранное нейросетью при последней генерации (если она отработала). */
+    private array $aiDesign = [];
+
+    /** Откуда тексты: 'ai', 'offline' или 'fallback' (ключ задан, но нейросеть не ответила). */
+    public string $source = 'offline';
+
+    public string $error = '';
+
+    /**
+     * Тексты и оформление вместе: нейросеть выбирает шаблон, тему и шрифт под тематику,
+     * чего она не выбрала, добирает рандомайзер.
+     *
+     * @return array{content: array, design: array}
+     */
+    public function build(string $title, string $type, ?string $city, string $prompt, int $variant = 0): array
+    {
+        $this->aiDesign = [];
+        $content = $this->generate($title, $type, $city, $prompt, $variant);
+
+        return [
+            'content' => $content,
+            'design' => $this->aiDesign + $this->pickDesign($title, $type, $prompt, $variant),
+        ];
+    }
+
     public function generate(string $title, string $type, ?string $city, string $prompt, int $variant = 0): array
     {
+        $this->source = 'offline';
         if (config('ai.key')) {
+            $this->error = '';
             $remote = $this->generateRemote($title, $type, $city, $prompt, $variant);
             if ($remote !== null) {
+                $this->source = 'ai';
+
                 return $remote;
             }
+            $this->source = 'fallback';
+            \Illuminate\Support\Facades\Log::warning('Нейросеть не сработала: '.$this->error);
         }
 
         return $this->generateOffline($title, $type, $city, $prompt, $variant);
@@ -118,21 +149,37 @@ class SiteGenerator
     private function generateRemote(string $title, string $type, ?string $city, string $prompt, int $variant): ?array
     {
         try {
-            $ask = 'Составь тексты одностраничного сайта на русском. Верни только JSON без пояснений вида: '
-                .'{"hero":{"title":"","subtitle":"","cta":""},"about":{"title":"","text":""},'
+            $themes = implode('|', array_keys(Site::THEMES));
+            $tpls = implode('|', array_keys(Site::TEMPLATES));
+            $fonts = implode('|', array_keys(Site::FONTS));
+            $system = 'Ты копирайтер и веб-дизайнер. Пишешь тексты одностраничного сайта на русском языке. '
+                .'Главное правило: тематика, названия, персонажи, игры, фильмы и любые детали из описания клиента '
+                .'должны явно звучать в заголовках, преимуществах, услугах, отзывах и названиях позиций. '
+                .'Не заменяй конкретику общими фразами и не подгоняй сайт под шаблонный образ типа сайта: '
+                .'тип лишь подсказывает структуру. Если описание про игровую или аниме-тематику, пиши в её духе. '
+                .'Цены правдоподобные, в рублях. Отвечай только JSON без пояснений и без markdown.';
+            $ask = 'Сайт: «'.$title.'». Тип: '.(self::TYPES[$type] ?? $type).'. Город: '.($city ?: 'не указан').".\n"
+                ."Описание от клиента (учти каждую деталь, это главное):\n\"\"\"\n".$prompt."\n\"\"\"\n"
+                .'Вариант №'.$variant.' (если больше нуля, предложи другую подачу и другие формулировки).'."\n"
+                .'Формат: {"design":{"template":"'.$tpls.'","theme":"'.$themes.'","font":"'.$fonts.'"},'
+                .'"hero":{"title":"","subtitle":"","cta":""},"about":{"title":"","text":""},'
                 .'"features":{"title":"","items":[{"title":"","text":""}]},'
                 .'"services":{"title":"","items":[{"title":"","text":"","price":""}]},'
                 .'"testimonials":{"title":"","items":[{"title":"","text":""}]},'
                 .'"contacts":{"title":"","address":"","phone":"","email":""}}. '
-                .'Преимуществ 3, услуг 4, отзывов 3. Название: '.$title.'. Тип: '.(self::TYPES[$type] ?? $type)
-                .'. Город: '.($city ?: 'не указан').'. Описание: '.$prompt.'. Вариант №'.$variant.'.';
+                .'В design выбери по одному значению, которое подходит настроению тематики (тёмный шаблон и графит для мрачного, '
+                .'роза или индиго для игрового, и т. п.). Преимуществ 3, услуг 4, отзывов 3, '
+                .'отзывы от выдуманных людей в духе темы.';
 
-            $response = \Illuminate\Support\Facades\Http::withToken(config('ai.key'))->timeout(30)
+            $response = \Illuminate\Support\Facades\Http::withToken(config('ai.key'))->timeout(60)
                 ->post(rtrim(config('ai.base_url'), '/').'/chat/completions', [
                     'model' => config('ai.model'),
-                    'messages' => [['role' => 'user', 'content' => $ask]],
+                    'messages' => [['role' => 'system', 'content' => $system], ['role' => 'user', 'content' => $ask]],
+                    'temperature' => 0.9,
                 ]);
             if (! $response->successful()) {
+                $this->error = 'HTTP '.$response->status().' '.mb_substr($response->body(), 0, 200);
+
                 return null;
             }
             $text = (string) $response->json('choices.0.message.content');
@@ -141,16 +188,30 @@ class SiteGenerator
             }
             $data = json_decode($text, true);
             if (! is_array($data)) {
+                $this->error = 'ответ не JSON: '.mb_substr($text, 0, 200);
+
                 return null;
             }
             foreach (array_keys(self::SECTIONS) as $key) {
                 if (! isset($data[$key]) || ! is_array($data[$key])) {
+                    $this->error = 'в ответе нет секции '.$key;
+
                     return null;
                 }
             }
 
+            $design = is_array($data['design'] ?? null) ? $data['design'] : [];
+            $this->aiDesign = array_filter([
+                'template' => array_key_exists($design['template'] ?? '', Site::TEMPLATES) ? $design['template'] : null,
+                'theme' => array_key_exists($design['theme'] ?? '', Site::THEMES) ? $design['theme'] : null,
+                'font' => array_key_exists($design['font'] ?? '', Site::FONTS) ? $design['font'] : null,
+            ]);
+            unset($data['design']);
+
             return $data;
-        } catch (\Throwable) {
+        } catch (\Throwable $e) {
+            $this->error = $e->getMessage();
+
             return null;
         }
     }

@@ -23,20 +23,21 @@ class SiteController extends Controller
     public function store(SiteRequest $request): RedirectResponse
     {
         $data = $request->validated();
+        $built = $this->generator->build($data['title'], $data['type'], $data['city'] ?? null, $data['prompt']);
         $site = Site::create([
             'title' => $data['title'],
             'type' => $data['type'],
             'city' => $data['city'] ?? null,
             'prompt' => $data['prompt'],
             'variant' => 0,
-            ...array_filter($this->generator->pickDesign($data['title'], $data['type'], $data['prompt']), fn ($v, $k) => $k !== 'template' || empty($data['template']), ARRAY_FILTER_USE_BOTH),
-            'template' => $data['template'] ?? $this->generator->pickDesign($data['title'], $data['type'], $data['prompt'])['template'],
-            'content' => $this->generator->generate($data['title'], $data['type'], $data['city'] ?? null, $data['prompt']),
+            ...$built['design'],
+            ...(empty($data['template']) ? [] : ['template' => $data['template']]),
+            'content' => $built['content'],
             'sections' => $this->generator->defaultSections(),
             'slug' => $this->uniqueSlug($data['title']),
         ]);
 
-        return redirect()->route('sites.edit', $site)->with('status', 'Сайт создан. Проверьте тексты и опубликуйте.');
+        return redirect()->route('sites.edit', $site)->with('status', 'Сайт создан. '.$this->sourceNote().' Проверьте тексты и опубликуйте.');
     }
 
     public function edit(Site $site)
@@ -74,13 +75,10 @@ class SiteController extends Controller
     public function regenerate(Site $site): RedirectResponse
     {
         $variant = $site->variant + 1;
-        $site->update([
-            'variant' => $variant,
-            ...$this->generator->pickDesign($site->title, $site->type, $site->prompt, $variant),
-            'content' => $this->generator->generate($site->title, $site->type, $site->city, $site->prompt, $variant),
-        ]);
+        $built = $this->generator->build($site->title, $site->type, $site->city, $site->prompt, $variant);
+        $site->update(['variant' => $variant, ...$built['design'], 'content' => $built['content']]);
 
-        return redirect()->route('sites.edit', $site)->with('status', 'Сайт сгенерирован заново: другие тексты и дизайн.');
+        return redirect()->route('sites.edit', $site)->with('status', 'Сайт сгенерирован заново: другие тексты и дизайн. '.$this->sourceNote());
     }
 
     public function randomize(Site $site): RedirectResponse
@@ -128,6 +126,15 @@ class SiteController extends Controller
         return response(view('site', ['site' => $site])->render())
             ->header('Content-Type', 'text/html; charset=UTF-8')
             ->header('Content-Disposition', 'attachment; filename="'.$site->slug.'.html"');
+    }
+
+    private function sourceNote(): string
+    {
+        return match ($this->generator->source) {
+            'ai' => 'Тексты и оформление написала нейросеть.',
+            'fallback' => 'Нейросеть не ответила ('.$this->generator->error.'), использован встроенный генератор.',
+            default => 'Использован встроенный генератор (ключ нейросети не задан).',
+        };
     }
 
     private function uniqueSlug(string $title): string

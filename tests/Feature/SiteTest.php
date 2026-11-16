@@ -202,4 +202,18 @@ class SiteTest extends TestCase
         $this->post('/sites', ['title' => 'Своё', 'type' => 'shop', 'prompt' => 'Магазин одежды', 'template' => 'minimal']);
         $this->assertSame('minimal', Site::where('title', 'Своё')->first()->template);
     }
+
+    public function test_ai_chooses_design_and_prompt_contains_user_details(): void
+    {
+        config(['ai.key' => 'k']);
+        $json = (new SiteGenerator)->generate('X', 'shop', null, 'Магазин');
+        $json['design'] = ['template' => 'bold', 'theme' => 'rose', 'font' => 'nope'];
+        \Illuminate\Support\Facades\Http::fake(['*' => \Illuminate\Support\Facades\Http::response(['choices' => [['message' => ['content' => json_encode($json)]]]])]);
+        $b = (new SiteGenerator)->build('X', 'shop', null, 'Мерч по Шедоу Фиенду');
+        $this->assertSame('bold', $b['design']['template']);
+        $this->assertSame('rose', $b['design']['theme']);
+        $this->assertArrayHasKey($b['design']['font'], Site::FONTS);
+        $this->assertArrayNotHasKey('design', $b['content']);
+        \Illuminate\Support\Facades\Http::assertSent(fn ($r) => str_contains($r['messages'][1]['content'], 'Шедоу Фиенду') && $r['messages'][0]['role'] === 'system');
+    }
 }
