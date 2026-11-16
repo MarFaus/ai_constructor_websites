@@ -42,6 +42,23 @@ if defined MISSING (
   exit /b 1
 )
 
+rem --- папка vendor (библиотеки). Если её нет, ставим через Composer
+if not exist "vendor\autoload.php" (
+  echo Папка vendor не найдена, устанавливаю библиотеки...
+  where composer >nul 2>&1
+  if not errorlevel 1 (
+    call composer install --no-dev --no-interaction
+  ) else (
+    if not exist "composer.phar" "%PHP%" -r "copy('https://getcomposer.org/download/latest-stable/composer.phar','composer.phar');"
+    "%PHP%" composer.phar install --no-dev --no-interaction
+  )
+  if not exist "vendor\autoload.php" (
+    echo [ОШИБКА] Не удалось установить библиотеки. Проверьте интернет и повторите.
+    pause
+    exit /b 1
+  )
+)
+
 rem --- первый запуск: .env, ключ, база
 if not exist ".env" (
   echo Первый запуск: создаю настройки...

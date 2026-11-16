@@ -87,7 +87,7 @@ class SiteTest extends TestCase
         $order = ['hero' => 1, 'about' => 2, 'features' => 3, 'services' => 4, 'testimonials' => 5, 'contacts' => 6];
         $order = ['hero' => 1, 'contacts' => 2, 'about' => 3, 'features' => 4, 'services' => 5, 'testimonials' => 6]; // контакты наверх
         $this->put(route('sites.update', $s), [
-            'title' => 'Новое имя', 'theme' => 'rose', 'font' => 'serif',
+            'title' => 'Новое имя', 'theme' => 'rose', 'font' => 'serif', 'template' => 'bold',
             'content' => ['hero' => ['title' => 'Привет', 'subtitle' => 'Подзаголовок', 'cta' => 'Жми'], 'about' => ['text' => 'Текст']],
             'order' => $order,
             'enabled' => ['hero' => 1, 'contacts' => 1, 'about' => 1],
@@ -156,5 +156,41 @@ class SiteTest extends TestCase
         $this->assertSame('От нейросети', (new SiteGenerator)->generate('X', 'shop', null, 'Описание магазина')['hero']['title']);
 
         $this->assertSame('X', (new SiteGenerator)->generate('X', 'shop', null, 'Описание магазина')['hero']['title']);
+    }
+
+    public function test_keywords_add_feature_cards_and_design_is_valid(): void
+    {
+        $g = new SiteGenerator;
+        $this->assertArrayHasKey('delivery', $g->analyze('Кафе с бесплатной доставкой и скидками'));
+        $c = $g->generate('X', 'cafe', null, 'Кафе с бесплатной доставкой');
+        $this->assertSame('Доставка', $c['features']['items'][0]['title']);
+        for ($v = 0; $v < 20; $v++) {
+            $d = $g->pickDesign('X', 'cafe', 'Описание кафе', $v);
+            $this->assertArrayHasKey($d['template'], Site::TEMPLATES);
+            $this->assertArrayHasKey($d['theme'], Site::THEMES);
+            $this->assertArrayHasKey($d['font'], Site::FONTS);
+        }
+    }
+
+    public function test_all_five_templates_render_and_randomize_works(): void
+    {
+        $s = $this->make();
+        foreach (array_keys(Site::TEMPLATES) as $t) {
+            $s->update(['template' => $t]);
+            $this->get(route('sites.preview', $s))->assertOk()->assertSee('t-'.$t, false);
+        }
+        $this->post(route('sites.randomize', $s))->assertRedirect();
+        $this->assertArrayHasKey($s->fresh()->template, Site::TEMPLATES);
+    }
+
+    public function test_regenerate_changes_design_over_variants(): void
+    {
+        $g = new SiteGenerator;
+        $set = [];
+        for ($v = 0; $v < 10; $v++) {
+            $d = $g->pickDesign('Кафе', 'cafe', 'Описание кафе', $v);
+            $set[$d['template']] = 1;
+        }
+        $this->assertGreaterThan(2, count($set));
     }
 }

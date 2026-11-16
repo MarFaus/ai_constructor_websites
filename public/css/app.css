@@ -66,3 +66,4 @@ div.err{background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:12
 .actions{align-items:center}
 .actions .btn.primary{margin:0;width:auto}
 form.card>h2:first-of-type{margin-top:0}
+.actions .btn{white-space:nowrap}

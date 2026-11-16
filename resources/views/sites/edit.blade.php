@@ -7,6 +7,8 @@
 <div class="bar">
     <a href="{{ route('sites.index') }}">← Все сайты</a>
     <div class="actions">
+        <form method="POST" action="{{ route('sites.randomize', $site) }}">@csrf
+            <button class="btn" type="submit">🎲 Случайный дизайн</button></form>
         <form method="POST" action="{{ route('sites.regenerate', $site) }}">@csrf
             <button class="btn" type="submit">Сгенерировать заново</button></form>
         <form method="POST" action="{{ route('sites.publish', $site) }}">@csrf
@@ -31,6 +33,13 @@
         <label for="title">Название</label>
         <input id="title" name="title" value="{{ old('title', $site->title) }}" maxlength="80" required>
         <input type="hidden" name="city" value="{{ old('city', $site->city) }}">
+
+        <label for="template">Шаблон</label>
+        <select id="template" name="template">
+            @foreach (\App\Models\Site::TEMPLATES as $k => $n)
+                <option value="{{ $k }}" @selected(old('template', $site->template) === $k)>{{ $n }}</option>
+            @endforeach
+        </select>
 
         <div class="two">
             <div>

@@ -47,19 +47,65 @@ h2::after{content:"";display:block;width:48px;height:4px;border-radius:2px;backg
 .price{font-weight:800;font-size:1.15rem;margin-top:16px}
 .quote{font-style:italic;margin-bottom:12px!important}
 footer{background:#111827;color:#9ca3af;text-align:center;padding:32px}
+
+.hero-art{display:none}
+/* ---- Шаблон: две колонки ---- */
+.t-split .hero{text-align:left;padding:96px 0}
+.t-split .hero .in{display:grid;grid-template-columns:1.2fr 1fr;gap:48px;align-items:center}
+.t-split .hero p{margin-left:0}
+.t-split .hero-art{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.t-split .hero-art span{display:block;aspect-ratio:1;border-radius:24px;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.35)}
+.t-split .hero-art span:nth-child(1){border-radius:50%}
+.t-split .hero-art span:nth-child(2){transform:translateY(24px)}
+.t-split .hero-art span:nth-child(3){grid-column:span 2;aspect-ratio:3/1}
+@media(max-width:700px){.t-split .hero .in{grid-template-columns:1fr}.t-split .hero-art{display:none}}
+/* ---- Шаблон: минимализм ---- */
+.t-minimal nav{border:0;background:#fff}
+.t-minimal .hero{background:#fff;color:var(--ink);text-align:left;padding:104px 0 72px}
+.t-minimal .hero .in{max-width:760px}
+.t-minimal .hero h1{font-size:clamp(2.4rem,7vw,4.2rem)}
+.t-minimal .hero p{margin-left:0;color:var(--muted)}
+.t-minimal .btn{background:var(--accent);color:#fff;box-shadow:none;border-radius:6px}
+.t-minimal section:nth-of-type(even){background:#fff}
+.t-minimal .card{border:0;border-top:3px solid var(--accent);border-radius:0;box-shadow:none;padding:20px 0 0;background:transparent}
+.t-minimal h2::after{display:none}
+.t-minimal nav a{border-radius:6px}
+/* ---- Шаблон: тёмный ---- */
+.t-bold{background:#0b0f19;color:#e5e7eb}
+.t-bold nav{background:rgba(11,15,25,.9);border-color:#1f2937}
+.t-bold nav a{color:#fff}
+.t-bold .hero{background:radial-gradient(circle at 30% 20%,color-mix(in srgb,var(--accent) 70%,#fff),transparent 60%),#0b0f19}
+.t-bold section:nth-of-type(even){background:#111827}
+.t-bold .card{background:#161d2e;border-color:#1f2937;box-shadow:none}
+.t-bold .card h3{color:color-mix(in srgb,var(--accent) 45%,#fff)}
+.t-bold .btn{background:var(--accent);color:#fff}
+.t-bold .price{color:#fff}
+.t-bold h2,.t-bold h1{color:#fff}
+/* ---- Шаблон: карточки ---- */
+.t-cards{background:var(--soft)}
+.t-cards nav{margin:16px auto;max-width:1040px;border:1px solid #e5e7eb;border-radius:999px}
+.t-cards .hero{margin:0 16px;border-radius:32px;padding:88px 0}
+.t-cards section,.t-cards section:nth-of-type(even){background:transparent;padding:48px 0}
+.t-cards section>.in{background:#fff;border-radius:28px;padding:40px;box-shadow:0 4px 24px rgba(0,0,0,.05)}
+.t-cards .card{background:var(--soft);border:0;box-shadow:none}
+.t-cards footer{background:transparent;color:var(--muted)}
+@media(max-width:600px){.t-cards section>.in{padding:24px}}
 @media(max-width:600px){section{padding:56px 0}.hero{padding:80px 0}}
 @media(prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 </head>
-<body>
+<body class="t-<?php echo e($site->template ?? 'classic'); ?>">
 <nav><div class="in"><b><?php echo e($site->title); ?></b><a href="#contacts"><?php echo e($c['hero']['cta']); ?></a></div></nav>
 <?php $__currentLoopData = $site->enabledSections(); $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $s): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
     <?php switch($s['key']):
         case ('hero'): ?>
             <div class="hero"><div class="in">
+                <div class="hero-text">
                 <h1><?php echo e($c['hero']['title']); ?></h1>
                 <p><?php echo e($c['hero']['subtitle']); ?></p>
                 <a class="btn" href="#contacts"><?php echo e($c['hero']['cta']); ?></a>
+                </div>
+                <div class="hero-art" aria-hidden="true"><span></span><span></span><span></span></div>
             </div></div>
             <?php break; ?>
         <?php case ('about'): ?>

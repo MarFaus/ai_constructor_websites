@@ -31,6 +31,7 @@ class SiteRequest extends FormRequest
         return $rules + [
             'theme' => ['required', Rule::in(array_keys(Site::THEMES))],
             'font' => ['required', Rule::in(array_keys(Site::FONTS))],
+            'template' => ['required', Rule::in(array_keys(Site::TEMPLATES))],
             'content' => ['required', 'array'],
             'content.hero.title' => ['required', 'string', 'max:120'],
             'content.hero.subtitle' => ['required', 'string', 'max:200'],

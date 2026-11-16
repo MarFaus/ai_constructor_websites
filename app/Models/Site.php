@@ -21,8 +21,16 @@ class Site extends Model
         'mono' => 'Моноширинный',
     ];
 
+    public const TEMPLATES = [
+        'classic' => 'Классика',
+        'split' => 'Две колонки',
+        'minimal' => 'Минимализм',
+        'bold' => 'Тёмный',
+        'cards' => 'Карточки',
+    ];
+
     protected $fillable = [
-        'title', 'type', 'city', 'prompt', 'theme', 'font',
+        'title', 'type', 'city', 'prompt', 'theme', 'font', 'template',
         'variant', 'content', 'sections', 'published', 'slug',
     ];
 

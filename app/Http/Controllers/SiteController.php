@@ -29,6 +29,7 @@ class SiteController extends Controller
             'city' => $data['city'] ?? null,
             'prompt' => $data['prompt'],
             'variant' => 0,
+            ...$this->generator->pickDesign($data['title'], $data['type'], $data['prompt']),
             'content' => $this->generator->generate($data['title'], $data['type'], $data['city'] ?? null, $data['prompt']),
             'sections' => $this->generator->defaultSections(),
             'slug' => $this->uniqueSlug($data['title']),
@@ -42,6 +43,7 @@ class SiteController extends Controller
         return view('sites.edit', [
             'site' => $site,
             'sectionNames' => SiteGenerator::SECTIONS,
+            'swatch' => ['indigo' => '#4f46e5', 'emerald' => '#047857', 'rose' => '#be123c', 'amber' => '#b45309', 'slate' => '#334155'],
         ]);
     }
 
@@ -60,6 +62,7 @@ class SiteController extends Controller
             'city' => $data['city'] ?? null,
             'theme' => $data['theme'],
             'font' => $data['font'],
+            'template' => $data['template'],
             'content' => array_replace_recursive($site->content, $data['content']),
             'sections' => array_map(fn ($k) => ['key' => $k, 'enabled' => isset($enabled[$k])], $keys),
         ]);
@@ -72,10 +75,18 @@ class SiteController extends Controller
         $variant = $site->variant + 1;
         $site->update([
             'variant' => $variant,
+            ...$this->generator->pickDesign($site->title, $site->type, $site->prompt, $variant),
             'content' => $this->generator->generate($site->title, $site->type, $site->city, $site->prompt, $variant),
         ]);
 
-        return redirect()->route('sites.edit', $site)->with('status', 'Тексты сгенерированы заново.');
+        return redirect()->route('sites.edit', $site)->with('status', 'Сайт сгенерирован заново: другие тексты и дизайн.');
+    }
+
+    public function randomize(Site $site): RedirectResponse
+    {
+        $site->update($this->generator->randomDesign());
+
+        return redirect()->route('sites.edit', $site)->with('status', 'Подобран случайный дизайн.');
     }
 
     public function publish(Site $site): RedirectResponse

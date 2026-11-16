@@ -5,6 +5,8 @@
 <div class="bar">
     <a href="<?php echo e(route('sites.index')); ?>">← Все сайты</a>
     <div class="actions">
+        <form method="POST" action="<?php echo e(route('sites.randomize', $site)); ?>"><?php echo csrf_field(); ?>
+            <button class="btn" type="submit">🎲 Случайный дизайн</button></form>
         <form method="POST" action="<?php echo e(route('sites.regenerate', $site)); ?>"><?php echo csrf_field(); ?>
             <button class="btn" type="submit">Сгенерировать заново</button></form>
         <form method="POST" action="<?php echo e(route('sites.publish', $site)); ?>"><?php echo csrf_field(); ?>
@@ -29,6 +31,13 @@
         <label for="title">Название</label>
         <input id="title" name="title" value="<?php echo e(old('title', $site->title)); ?>" maxlength="80" required>
         <input type="hidden" name="city" value="<?php echo e(old('city', $site->city)); ?>">
+
+        <label for="template">Шаблон</label>
+        <select id="template" name="template">
+            <?php $__currentLoopData = \App\Models\Site::TEMPLATES; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $k => $n): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                <option value="<?php echo e($k); ?>" <?php if(old('template', $site->template) === $k): echo 'selected'; endif; ?>><?php echo e($n); ?></option>
+            <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+        </select>
 
         <div class="two">
             <div>

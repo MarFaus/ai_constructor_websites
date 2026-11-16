@@ -2,6 +2,8 @@
 
 namespace App\Services;
 
+use App\Models\Site;
+
 /**
  * «ИИ» конструктора. Работает офлайн: по типу бизнеса и описанию собирает
  * тексты из шаблонов. Результат детерминирован: одинаковые данные и variant
@@ -27,6 +29,22 @@ class SiteGenerator
         'courses' => 'Онлайн-курсы',
         'services' => 'Услуги для клиентов',
         'event' => 'Мероприятие',
+    ];
+
+    /**
+     * Ключевые слова из описания. Найденные темы добавляют карточку
+     * в «Преимущества» и подсказывают цветовую тему.
+     */
+    private const KEYWORDS = [
+        'delivery' => [['доставк', 'курьер'], 'Доставка', 'Привезём туда, где вам удобно.', 'amber'],
+        'kids' => [['детск', 'дети', 'ребён', 'малыш'], 'Для детей', 'Есть всё для маленьких гостей и клиентов.', 'rose'],
+        'eco' => [['эко', 'органи', 'натурал', 'фермер', 'веган', 'вегет'], 'Натуральное', 'Только проверенные натуральные составляющие.', 'emerald'],
+        'night' => [['круглосуточ', '24/7', 'ночью', 'до утра'], 'Круглосуточно', 'Работаем, когда вам нужно.', 'slate'],
+        'sale' => [['скидк', 'акци', 'выгодн', 'дешев', 'бонус'], 'Выгодные цены', 'Скидки и бонусы для постоянных клиентов.', 'amber'],
+        'premium' => [['премиум', 'элитн', 'эксклюзив', 'люкс', 'авторск'], 'Авторский подход', 'Индивидуальное решение для каждого.', 'slate'],
+        'online' => [['онлайн', 'дистанц', 'удалённ', 'удаленн'], 'Онлайн', 'Всё можно оформить, не выходя из дома.', 'indigo'],
+        'fun' => [['аниме', 'игр', 'тематич', 'наруто', 'комикс', 'косплей'], 'Особая атмосфера', 'Тематическое оформление, в которое хочется вернуться.', 'rose'],
+        'team' => [['команд', 'опытн', 'профессионал', 'мастер'], 'Сильная команда', 'Работают люди, которые любят своё дело.', 'indigo'],
     ];
 
     private const DATA = [
@@ -153,6 +171,19 @@ class SiteGenerator
 
         $place = $city ? ' · '.$city : '';
 
+        // Преимущества: сначала карточки по ключевым словам описания, затем из шаблона типа.
+        $features = [];
+        foreach ($this->analyze($prompt) as [$ft, $fx]) {
+            $features[] = [$ft, $fx];
+        }
+        $features = array_slice(array_merge($features, $rotate($d['features'], 1)), 0, 3);
+
+        $about = trim(preg_replace('/\s+/u', ' ', $prompt));
+        $about = mb_strtoupper(mb_substr($about, 0, 1)).mb_substr($about, 1);
+        if (! preg_match('/[.!?…]$/u', $about)) {
+            $about .= '.';
+        }
+
         return [
             'hero' => [
                 'title' => $title,
@@ -161,11 +192,11 @@ class SiteGenerator
             ],
             'about' => [
                 'title' => 'О нас',
-                'text' => trim($prompt).' '.$d['about'],
+                'text' => $about.' '.$d['about'],
             ],
             'features' => [
                 'title' => 'Почему выбирают нас',
-                'items' => array_map(fn ($i) => ['title' => $i[0], 'text' => $i[1]], array_slice($rotate($d['features'], 1), 0, 3)),
+                'items' => array_map(fn ($i) => ['title' => $i[0], 'text' => $i[1]], $features),
             ],
             'services' => [
                 'title' => 'Услуги и цены',
@@ -181,6 +212,50 @@ class SiteGenerator
                 'phone' => '+7 (900) 000-00-00',
                 'email' => 'hello@example.com',
             ],
+        ];
+    }
+
+    /** Темы из описания: ['delivery' => [название, текст, тема], ...] */
+    public function analyze(string $prompt): array
+    {
+        $low = mb_strtolower($prompt);
+        $found = [];
+        foreach (self::KEYWORDS as $tag => [$words, $title, $text, $theme]) {
+            foreach ($words as $w) {
+                if (str_contains($low, $w)) {
+                    $found[$tag] = [$title, $text, $theme];
+                    break;
+                }
+            }
+        }
+
+        return $found;
+    }
+
+    /** Дизайн для нового сайта: шаблон, цветовая тема и шрифт. Зависит от описания и варианта. */
+    public function pickDesign(string $title, string $type, string $prompt, int $variant = 0): array
+    {
+        $seed = crc32($title.'|'.$type.'|'.$prompt) + $variant * 7919;
+        $templates = array_keys(Site::TEMPLATES);
+        $themes = array_keys(Site::THEMES);
+        $fonts = array_keys(Site::FONTS);
+        $tags = $this->analyze($prompt);
+        $hint = $tags ? array_values($tags)[$seed % count($tags)][2] : null;
+
+        return [
+            'template' => $templates[$seed % count($templates)],
+            'theme' => $hint && $variant === 0 ? $hint : $themes[intdiv($seed, 5) % count($themes)],
+            'font' => $fonts[intdiv($seed, 3) % 2 === 0 ? 0 : (intdiv($seed, 11) % count($fonts))],
+        ];
+    }
+
+    /** Совершенно случайный дизайн (кнопка «Случайный дизайн»). */
+    public function randomDesign(): array
+    {
+        return [
+            'template' => array_rand(Site::TEMPLATES),
+            'theme' => array_rand(Site::THEMES),
+            'font' => array_rand(Site::FONTS),
         ];
     }
 
